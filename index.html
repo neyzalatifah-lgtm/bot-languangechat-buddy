@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Language Chat Buddy 🌍</title>
+  <style>
+
+    /* =============================================
+       RESET & BASE
+    ============================================= */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    /* =============================================
+       APP SHELL
+    ============================================= */
+    .app {
+      width: 100%;
+      max-width: 800px;
+      height: 96vh;
+      max-height: 880px;
+      display: flex;
+      flex-direction: column;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+    }
+
+    /* =============================================
+       HEADER
+    ============================================= */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding: 14px 20px;
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+      flex-shrink: 0;
+    }
+
+    /* Bot avatar */
+    .header__avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.45);
+    }
+
+    /* Bot name + status */
+    .header__info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .header__name {
+      color: #ffffff;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header__status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 3px;
+      font-size: 12px;
+      color: #86efac;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      flex-shrink: 0;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.85); }
+    }
+
+  </style>
+</head>
+  <style>
+    /* =============================================
+       LANGUAGE SELECTOR (header pills)
+    ============================================= */
+    .lang-bar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .lang-btn {
+      padding: 5px 13px;
+      border-radius: 20px;
+      border: 1.5px solid rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.70);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+      user-select: none;
+    }
+
+    .lang-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+      color: #ffffff;
+    }
+
+    .lang-btn.active {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-color: transparent;
+      color: #ffffff;
+      box-shadow: 0 2px 12px rgba(102, 126, 234, 0.55);
+    }
+
+    /* =============================================
+       CHAT AREA
+    ============================================= */
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: rgba(255, 255, 255, 0.03);
+      scroll-behavior: smooth;
+    }
+
+    /* Custom scrollbar */
+    .chat::-webkit-scrollbar       { width: 5px; }
+    .chat::-webkit-scrollbar-track { background: transparent; }
+    .chat::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.18);
+      border-radius: 99px;
+    }
+
+    /* =============================================
+       MESSAGE ROW
+    ============================================= */
+    .msg-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    .msg-row--user {
+      flex-direction: row-reverse;
+    }
+
+    /* Small avatar per message */
+    .msg-row__avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .msg-row--bot  .msg-row__avatar { background: linear-gradient(135deg, #667eea, #764ba2); }
+    .msg-row--user .msg-row__avatar { background: linear-gradient(135deg, #f093fb, #f5576c); }
+
+    /* Wrapper for bubble + correction card + timestamp */
+    .msg-row__col {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      max-width: 72%;
+    }
+
+    .msg-row--user .msg-row__col {
+      align-items: flex-end;
+    }
+
+    /* =============================================
+       CHAT BUBBLE
+    ============================================= */
+    .bubble {
+      padding: 11px 16px;
+      border-radius: 18px;
+      font-size: 14px;
+      line-height: 1.65;
+      word-break: break-word;
+    }
+
+    /* Bot bubble */
+    .msg-row--bot .bubble {
+      background: rgba(255, 255, 255, 0.10);
+      color: #e2e2f0;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom-left-radius: 4px;
+    }
+
+    /* User bubble */
+    .msg-row--user .bubble {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #ffffff;
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 4px 14px rgba(102, 126, 234, 0.40);
+    }
+
+    /* Timestamp */
+    .msg-row__time {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.28);
+      padding: 0 4px;
+    }
+
+  </style>
+  <style>
+    /* =============================================
+       CORRECTION CARD  (grammar tips below user bubble)
+    ============================================= */
+    .correction {
+      background: rgba(255, 193, 7, 0.10);
+      border: 1px solid rgba(255, 193, 7, 0.35);
+      border-radius: 12px;
+      padding: 9px 13px;
+      font-size: 12.5px;
+      color: #ffe082;
+      line-height: 1.6;
+      max-width: 100%;
+    }
+
+    .correction__title {
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .correction .wrong { text-decoration: line-through; color: #ff8a80; }
+    .correction .right { color: #b9f6ca; font-weight: 600; }
+
+    /* =============================================
+       TYPING INDICATOR  (bot "is typing…")
+    ============================================= */
+    .typing {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 2px;
+    }
+
+    .typing__dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.50);
+      animation: bounce 1.2s ease-in-out infinite;
+    }
+
+    .typing__dot:nth-child(2) { animation-delay: 0.20s; }
+    .typing__dot:nth-child(3) { animation-delay: 0.40s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30%           { transform: translateY(-8px); }
+    }
+
+    /* =============================================
+       INPUT AREA  (footer)
+    ============================================= */
+    .input-area {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      padding: 14px 18px;
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 1px solid rgba(255, 255, 255, 0.10);
+      flex-shrink: 0;
+    }
+
+    /* Left column: textarea + suggestion chips */
+    .input-area__col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Textarea */
+    .input-box {
+      width: 100%;
+      min-height: 44px;
+      max-height: 120px;
+      padding: 10px 16px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1.5px solid rgba(255, 255, 255, 0.15);
+      border-radius: 22px;
+      color: #ffffff;
+      font-size: 14px;
+      font-family: inherit;
+      line-height: 1.5;
+      resize: none;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-box::placeholder { color: rgba(255, 255, 255, 0.35); }
+    .input-box:focus        { border-color: #667eea; }
+
+    /* =============================================
+       QUICK-SUGGESTION CHIPS
+    ============================================= */
+    .chips {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      padding: 5px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(102, 126, 234, 0.45);
+      background: rgba(102, 126, 234, 0.12);
+      color: #a8b8ff;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    .chip:hover {
+      background: rgba(102, 126, 234, 0.32);
+      color: #ffffff;
+    }
+
+    /* =============================================
+       SEND BUTTON
+    ============================================= */
+    .send-btn {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      border: none;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #ffffff;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.50);
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    }
+
+    .send-btn:hover  { transform: scale(1.08); box-shadow: 0 6px 22px rgba(102, 126, 234, 0.65); }
+    .send-btn:active { transform: scale(0.92); }
+    .send-btn:disabled { opacity: 0.40; cursor: not-allowed; transform: none; }
+
+    /* =============================================
+       RESPONSIVE  (≤ 520px)
+    ============================================= */
+    @media (max-width: 520px) {
+      .header        { padding: 12px 14px; gap: 10px; }
+      .header__name  { font-size: 15px; }
+      .lang-btn      { font-size: 11px; padding: 4px 9px; }
+      .bubble        { font-size: 13px; }
+      .msg-row__col  { max-width: 86%; }
+      .send-btn      { width: 42px; height: 42px; font-size: 18px; }
+    }
+  </style>
+<body>
+
+<div class="app">
+
+  <!-- =============================================
+       HEADER
+  ============================================= -->
+  <header class="header">
+
+    <div class="header__avatar">🤖</div>
+
+    <div class="header__info">
+      <div class="header__name">Language Chat Buddy</div>
+      <div class="header__status">
+        <span class="status-dot"></span>
+        Online &amp; siap mengobrol
+      </div>
+    </div>
+
+    <nav class="lang-bar" id="langBar" aria-label="Pilih bahasa">
+      <button class="lang-btn active" data-lang="en">🇺🇸 English</button>
+      <button class="lang-btn"        data-lang="zh">🇨🇳 中文</button>
+      <button class="lang-btn"        data-lang="ja">🇯🇵 日本語</button>
+      <button class="lang-btn"        data-lang="fr">🇫🇷 Français</button>
+      <button class="lang-btn"        data-lang="de">🇩🇪 Deutsch</button>
+      <button class="lang-btn"        data-lang="es">🇪🇸 Español</button>
+    </nav>
+
+  </header>
+
+  <!-- =============================================
+       CHAT AREA  (messages injected here by JS)
+  ============================================= -->
+  <main class="chat" id="chat" aria-live="polite" aria-label="Percakapan"></main>
+
+  <!-- =============================================
+       INPUT AREA
+  ============================================= -->
+  <footer class="input-area">
+
+    <div class="input-area__col">
+      <textarea
+        id="inputBox"
+        class="input-box"
+        placeholder="Ketik pesan… (Enter kirim, Shift+Enter baris baru)"
+        rows="1"
+        aria-label="Kotak pesan"
+      ></textarea>
+      <div class="chips" id="chips" aria-label="Saran cepat"></div>
+    </div>
+
+    <button class="send-btn" id="sendBtn" aria-label="Kirim pesan" title="Kirim">
+      &#9658;
+    </button>
+
+  </footer>
+
+</div>
+
+<script>
+/* =======================================================
+   BAGIAN 1 — DATA BAHASA
+   Berisi: pesan sambutan, saran cepat, daftar respons
+   bot berdasarkan trigger kata kunci, dan balasan default.
+   ======================================================= */
+const LANG = {
+
+  /* ---------- ENGLISH ---------- */
+  en: {
+    name: 'English',
+    welcome: `👋 Hello! I'm your <b>English Chat Buddy</b>.<br>
+      Chat freely — I'll reply in English and gently point out
+      any grammar or spelling mistakes. Let's go!`,
+    placeholder: 'Type a message… (Enter to send, Shift+Enter new line)',
+    correctionLabel: '📝 Grammar Tip',
+    chips: [
+      'Tell me about yourself',
+      "What's your hobby?",
+      'I want to practice greetings',
+      'What did you do today?',
+    ],
+    triggers: [
+      {
+        re: /\b(hello|hi|hey|howdy|yo)\b/i,
+        replies: [
+          'Hello! Great to hear from you 😊 How are you doing today?',
+          "Hey there! Nice to chat with you. What's on your mind?",
+          'Hi! Always fun to meet someone eager to learn English!',
+        ],
+      },
+      {
+        re: /\b(how are you|how r u|how do you do|how'?s it going)\b/i,
+        replies: [
+          "I'm doing great, thank you for asking! How about you?",
+          'Fantastic! I love chatting with language learners. How are you feeling?',
+        ],
+      },
+      {
+        re: /\b(my name is|i am|i'?m)\s+\w+/i,
+        replies: [
+          'What a lovely introduction! Nice to meet you 🙂 How long have you been learning English?',
+          "Great to meet you! Are you enjoying your English practice so far?",
+        ],
+      },
+      {
+        re: /\b(hobby|hobbies|like to|love to|enjoy|pastime)\b/i,
+        replies: [
+          "Cool! Hobbies are a great way to pick up new vocabulary. What else do you enjoy?",
+          'Nice! Talking about hobbies is excellent English practice. Tell me more!',
+        ],
+      },
+      {
+        re: /\b(weather|rain|sunny|cloudy|cold|hot|warm|snow)\b/i,
+        replies: [
+          "Weather is a classic English small-talk topic! ☁️ What's it like where you are?",
+          'Oh yes, weather chat is very British 😄 Is it nice outside today?',
+        ],
+      },
+      {
+        re: /\b(food|eat|hungry|lunch|dinner|breakfast|restaurant|cook)\b/i,
+        replies: [
+          "Yum! 🍜 Food vocabulary is so fun. What's your favourite dish?",
+          'Talking about food is great English practice! What do you usually eat?',
+        ],
+      },
+      {
+        re: /\b(travel|trip|visit|country|city|abroad|vacation|holiday)\b/i,
+        replies: [
+          'Travelling is such a rewarding experience! ✈️ Where have you been, or where would you like to go?',
+          'Discussing travel is excellent English practice! Have you been to any English-speaking countries?',
+        ],
+      },
+      {
+        re: /\b(work|job|career|office|company|profession)\b/i,
+        replies: [
+          'Interesting! What kind of work do you do? Professional vocabulary is very useful.',
+          "Work topics are great for building practical English. What's your field?",
+        ],
+      },
+      {
+        re: /\b(study|learn|practice|school|university|english|language)\b/i,
+        replies: [
+          '💪 Consistent practice is the key to mastering English. What aspect are you focusing on?',
+          'The best way to learn is real conversation — just like this! Keep it up.',
+        ],
+      },
+      {
+        re: /\b(family|mom|dad|sister|brother|parent|child|kids)\b/i,
+        replies: [
+          'Family is such a warm topic ❤️ Tell me more. Do you have siblings?',
+          'How lovely! Are you close with your family?',
+        ],
+      },
+    ],
+    defaults: [
+      "That's really interesting! Could you tell me more about that?",
+      "I see! That's a great topic. What do you think about it?",
+      'Fascinating — please continue! I\'m all ears 👂',
+      "Wonderful! You're doing great with your English. Keep it up!",
+      'Oh, that\'s cool! Can you describe it in a bit more detail?',
+      "Thanks for sharing that! It's a pleasure chatting with you.",
+      "Hmm, I'd love to hear more. Could you expand on that?",
+    ],
+  },
+
+  /* ---------- MANDARIN ---------- */
+  zh: {
+    name: '中文',
+    welcome: `👋 你好！我是你的<b>中文聊天伙伴</b>。<br>
+      用中文随便聊吧 — 我会回复并温柔地帮你改正错误！`,
+    placeholder: '发送消息… (Enter 发送)',
+    correctionLabel: '📝 语言小提示',
+    chips: ['你好，介绍一下自己', '你喜欢什么食物？', '今天天气怎么样？', '你有什么爱好？'],
+    triggers: [
+      {
+        re: /你好|嗨|哈喽|\bhi\b|\bhello\b/i,
+        replies: [
+          '你好！很高兴认识你！😊 你今天怎么样？',
+          '嗨！欢迎来练习中文！有什么想聊的吗？',
+        ],
+      },
+      {
+        re: /你好吗|怎么样|最近如何|近况/,
+        replies: [
+          '我很好，谢谢你问！你呢？',
+          '非常好！我喜欢和学中文的朋友聊天。你最近好吗？',
+        ],
+      },
+      {
+        re: /我叫|我是|名字叫/,
+        replies: [
+          '很高兴认识你！🙂 你学中文多久了？',
+          '好名字！你是从哪里开始学中文的？',
+        ],
+      },
+      {
+        re: /食物|吃|饿|饭|菜|餐|料理/,
+        replies: [
+          '哇，说到吃的！🍜 你最喜欢什么中国菜？',
+          '美食话题最有趣了！你会做中国菜吗？',
+        ],
+      },
+      {
+        re: /天气|下雨|晴天|冷|热|暖和|雪/,
+        replies: [
+          '天气是很常见的聊天话题！☁️ 你那边今天天气怎么样？',
+          '是啊！天气词汇在中文里很实用。你喜欢什么天气？',
+        ],
+      },
+      {
+        re: /爱好|兴趣|喜欢|玩|运动/,
+        replies: [
+          '兴趣爱好是学词汇的好途径！你还有其他爱好吗？',
+          '太棒了！和我多说说你的爱好吧～',
+        ],
+      },
+      {
+        re: /学习|练习|中文|汉语|语言/,
+        replies: [
+          '太棒了！💪 坚持练习是学好中文的关键。你觉得哪个部分最难？',
+          '很好的态度！多聊聊，你的中文会进步很快的！',
+        ],
+      },
+    ],
+    defaults: [
+      '哦，这很有意思！能详细说说吗？',
+      '我明白了！这个话题很有趣，你怎么看？',
+      '真的吗？请继续说！我很感兴趣 😊',
+      '太棒了！你的中文表达得很好！',
+      '很有意思！我想了解更多。',
+      '谢谢你分享！很高兴和你聊天。',
+      '嗯，能多说一点吗？',
+    ],
+  },
+
+  /* ---------- JAPANESE ---------- */
+  ja: {
+    name: '日本語',
+    welcome: `👋 こんにちは！私はあなたの<b>日本語チャット仲間</b>です。<br>
+      日本語で自由に話しかけてください — 優しく間違いを直してあげます！`,
+    placeholder: 'メッセージを入力… (Enter で送信)',
+    correctionLabel: '📝 言語のヒント',
+    chips: ['自己紹介して！', '好きな食べ物は？', '趣味は何ですか？', '今日どうだった？'],
+    triggers: [
+      {
+        re: /こんにちは|こんばんは|おはよう|\bhi\b|\bhello\b|やあ|どうも/i,
+        replies: [
+          'こんにちは！😊 よろしくね！今日はどうですか？',
+          'やあ！日本語の練習、一緒に頑張りましょう！',
+        ],
+      },
+      {
+        re: /元気|どう|最近|調子/,
+        replies: [
+          '元気ですよ、ありがとう！あなたは？',
+          'とても元気です！日本語を一緒に練習しましょう！',
+        ],
+      },
+      {
+        re: /名前|私は|僕は|わたしは/,
+        replies: [
+          'はじめまして！🙂 日本語を勉強してどのくらいになりますか？',
+          'いい名前ですね！どこで日本語を勉強していますか？',
+        ],
+      },
+      {
+        re: /食べ物|食べる|ご飯|料理|おいしい|レストラン/,
+        replies: [
+          '食べ物の話は楽しいですね！🍣 好きな日本食は何ですか？',
+          'おいしそう！日本の食べ物についてもっと話しましょう！',
+        ],
+      },
+      {
+        re: /趣味|好き|楽しい|遊ぶ|スポーツ/,
+        replies: [
+          '趣味の話は語彙を増やすのにいいですよ！他にも好きなことはありますか？',
+          '楽しそうですね！趣味について日本語で話すのはいい練習ですよ。',
+        ],
+      },
+      {
+        re: /学ぶ|勉強|練習|日本語|言語/,
+        replies: [
+          '💪 継続は力なり！日本語で一番難しいのはどの部分ですか？',
+          '素晴らしい！会話を続けることが一番の練習ですよ。',
+        ],
+      },
+    ],
+    defaults: [
+      'おもしろいですね！もっと教えてください！',
+      'なるほど！それはいい話題ですね。どう思いますか？',
+      'すごいですね！続けてください 😊',
+      '上手ですよ！日本語を続けて頑張って！',
+      'へえ、詳しく教えてもらえますか？',
+      'ありがとうございます！話してくれて嬉しいです。',
+      'うーん、もう少し教えてもらえますか？',
+    ],
+  },
+
+  /* ---------- FRENCH ---------- */
+  fr: {
+    name: 'Français',
+    welcome: `👋 Bonjour ! Je suis ton <b>ami de chat en français</b>.<br>
+      Écris librement — je répondrai en français et corrigerai gentiment tes erreurs !`,
+    placeholder: 'Écris un message… (Entrée pour envoyer)',
+    correctionLabel: '📝 Conseil de grammaire',
+    chips: ['Présente-toi !', 'Tu aimes quoi comme nourriture ?', 'Quels sont tes hobbies ?', 'Comment tu vas ?'],
+    triggers: [
+      {
+        re: /\b(bonjour|salut|coucou|bonsoir|hello|hi)\b/i,
+        replies: [
+          "Bonjour ! 😊 Ravi de te rencontrer ! Comment vas-tu aujourd'hui ?",
+          'Salut ! Bienvenue pour pratiquer le français ! De quoi veux-tu parler ?',
+        ],
+      },
+      {
+        re: /comment vas-tu|ça va|comment tu vas|tu vas bien/i,
+        replies: [
+          'Ça va très bien, merci ! Et toi ?',
+          "Super ! J'adore parler avec des apprenants de français. Tu vas bien ?",
+        ],
+      },
+      {
+        re: /je m['']?appelle|je suis|mon nom est/i,
+        replies: [
+          "Enchanté(e) ! 🙂 Depuis combien de temps tu apprends le français ?",
+          "Super prénom ! Comment as-tu commencé à apprendre le français ?",
+        ],
+      },
+      {
+        re: /\b(nourriture|manger|faim|repas|cuisine|plat|restaurant)\b/i,
+        replies: [
+          "Ah, la cuisine ! 🥐 Un sujet magnifique. Quel est ton plat préféré ?",
+          'La gastronomie est un pilier de la culture française ! Tu aimes quoi comme plat ?',
+        ],
+      },
+      {
+        re: /\b(hobby|hobbies|loisir|sport|aimer|adorer)\b/i,
+        replies: [
+          "C'est intéressant ! Les loisirs aident beaucoup à apprendre le vocabulaire. Tu as d'autres passions ?",
+          "Super ! Parler de ses hobbies est une excellente pratique du français.",
+        ],
+      },
+    ],
+    defaults: [
+      "C'est vraiment intéressant ! Peux-tu m'en dire plus ?",
+      "Je vois ! C'est un bon sujet. Qu'en penses-tu ?",
+      "Fascinant — continue, je t'écoute ! 😊",
+      'Super ! Tu te débrouilles très bien en français !',
+      'Oh, c\'est cool ! Tu peux décrire ça en détail ?',
+      "Merci de partager ! C'est un plaisir de discuter avec toi.",
+      'Hmm, peux-tu développer un peu plus ?',
+    ],
+  },
+
+  /* ---------- GERMAN ---------- */
+  de: {
+    name: 'Deutsch',
+    welcome: `👋 Hallo! Ich bin dein <b>Deutsch-Chat-Freund</b>.<br>
+      Schreib einfach drauflos — ich antworte auf Deutsch und korrigiere sanft deine Fehler!`,
+    placeholder: 'Schreib eine Nachricht… (Enter zum Senden)',
+    correctionLabel: '📝 Grammatik-Tipp',
+    chips: ['Hallo, stell dich vor!', 'Was isst du gerne?', 'Was sind deine Hobbys?', "Wie geht's dir?"],
+    triggers: [
+      {
+        re: /\b(hallo|guten tag|hi|hey|servus|moin|guten morgen|guten abend)\b/i,
+        replies: [
+          'Hallo! 😊 Schön, von dir zu hören! Wie geht es dir heute?',
+          'Hey! Willkommen zum Deutschüben! Worüber möchtest du sprechen?',
+        ],
+      },
+      {
+        re: /wie geht|wie geht'?s|wie geht es|wie läuft'?s/i,
+        replies: [
+          'Mir geht es gut, danke! Und dir?',
+          'Prima! Ich chatte gerne mit Deutschlernenden. Wie geht es dir?',
+        ],
+      },
+      {
+        re: /ich heiße|mein name ist|ich bin\s+\w+/i,
+        replies: [
+          'Schön dich kennenzulernen! 🙂 Wie lange lernst du schon Deutsch?',
+          'Toller Name! Wo lernst du Deutsch?',
+        ],
+      },
+      {
+        re: /\b(essen|hunger|kochen|restaurant|lieblingsessen|frühstück|mittag|abendessen)\b/i,
+        replies: [
+          'Lecker! 🥨 Was ist dein Lieblingsessen? Deutsche Küche ist sehr vielfältig!',
+          'Über Essen zu reden ist super Sprachübung! Kochst du selbst?',
+        ],
+      },
+      {
+        re: /\b(hobby|hobbies|freizeit|sport|spielen|lesen)\b/i,
+        replies: [
+          'Interessant! Hobbys sind ein tolles Thema zum Vokabellernen. Was machst du noch gerne?',
+          'Cool! Über Hobbys auf Deutsch zu reden ist eine gute Übung.',
+        ],
+      },
+    ],
+    defaults: [
+      'Das ist wirklich interessant! Kannst du mehr darüber erzählen?',
+      'Ich verstehe! Das ist ein tolles Thema. Was denkst du darüber?',
+      'Faszinierend — bitte mach weiter! 😊',
+      'Wunderbar! Du machst das sehr gut auf Deutsch!',
+      'Oh, cool! Kannst du das genauer beschreiben?',
+      'Danke fürs Teilen! Es ist ein Vergnügen, mit dir zu chatten.',
+      'Hmm, kannst du das etwas ausführen?',
+    ],
+  },
+
+  /* ---------- SPANISH ---------- */
+  es: {
+    name: 'Español',
+    welcome: `👋 ¡Hola! Soy tu <b>amigo de chat en español</b>.<br>
+      Escribe lo que quieras — te responderé en español y corregiré tus errores amablemente!`,
+    placeholder: 'Escribe un mensaje… (Enter para enviar)',
+    correctionLabel: '📝 Consejo de gramática',
+    chips: ['¡Hola, preséntate!', '¿Qué comida te gusta?', '¿Cuáles son tus hobbies?', '¿Cómo estás?'],
+    triggers: [
+      {
+        re: /\b(hola|buenas|qué tal|hey|buenos días|buenas tardes|buenas noches)\b/i,
+        replies: [
+          '¡Hola! 😊 ¡Qué bueno saber de ti! ¿Cómo estás hoy?',
+          '¡Hola! ¡Bienvenido a practicar español! ¿De qué quieres hablar?',
+        ],
+      },
+      {
+        re: /cómo estás|qué tal estás|cómo te va|cómo te encuentras/i,
+        replies: [
+          '¡Muy bien, gracias por preguntar! ¿Y tú?',
+          '¡Genial! Me encanta charlar con estudiantes de español. ¿Tú cómo estás?',
+        ],
+      },
+      {
+        re: /me llamo|mi nombre es|soy\s+\w+/i,
+        replies: [
+          '¡Encantado! 🙂 ¿Cuánto tiempo llevas aprendiendo español?',
+          '¡Bonito nombre! ¿Cómo empezaste a aprender español?',
+        ],
+      },
+      {
+        re: /\b(comida|comer|hambre|cocina|plato|restaurante|desayuno|almuerzo|cena)\b/i,
+        replies: [
+          '¡Uy, hablando de comida! 🥘 ¿Cuál es tu plato favorito?',
+          '¡La gastronomía española es deliciosa! ¿Has probado la paella o las tapas?',
+        ],
+      },
+      {
+        re: /\b(hobby|hobbies|afición|deporte|gustar|encantar)\b/i,
+        replies: [
+          '¡Qué interesante! Los hobbies son geniales para aprender vocabulario. ¿Qué más te gusta hacer?',
+          '¡Genial! Hablar de aficiones es excelente práctica del español.',
+        ],
+      },
+    ],
+    defaults: [
+      '¡Es muy interesante! ¿Puedes contarme más?',
+      '¡Ya veo! Es un buen tema. ¿Qué piensas tú?',
+      '¡Fascinante — continúa, te escucho! 😊',
+      '¡Maravilloso! Lo estás haciendo muy bien en español.',
+      '¡Qué guay! ¿Puedes describirlo con más detalle?',
+      '¡Gracias por compartir! Es un placer charlar contigo.',
+      'Hmm, ¿puedes elaborar un poco más?',
+    ],
+  },
+
+}; // end LANG
+
+/* =======================================================
+   BAGIAN 2 — GRAMMAR / SPELLING CHECKER  (English only)
+   Mengembalikan array string tips, atau null jika bersih.
+   ======================================================= */
+const GRAMMAR_RULES = [
+  // Subject-verb agreement
+  { re: /\bi\s+(is|are)\b/gi,
+    tip: m => `"I ${m[1]}" → coba <b>"I am"</b>` },
+  { re: /\b(he|she|it)\s+are\b/gi,
+    tip: m => `"${m[1]} are" → try <b>"${m[1]} is"</b>` },
+  { re: /\b(he|she|it)\s+were\b/gi,
+    tip: m => `"${m[1]} were" → try <b>"${m[1]} was"</b>` },
+  { re: /\b(they|we|you)\s+is\b/gi,
+    tip: m => `"${m[1]} is" → try <b>"${m[1]} are"</b>` },
+  { re: /\b(they|we|you)\s+was\b/gi,
+    tip: m => `"${m[1]} was" → try <b>"${m[1]} were"</b>` },
+  // Common misspellings
+  { re: /\bteh\b/gi,        tip: () => '"teh" → try <b>"the"</b>' },
+  { re: /\brecieve\b/gi,    tip: () => '"recieve" → try <b>"receive"</b>' },
+  { re: /\bdefinately\b/gi, tip: () => '"definately" → try <b>"definitely"</b>' },
+  { re: /\boccured\b/gi,    tip: () => '"occured" → try <b>"occurred"</b>' },
+  { re: /\bseperate\b/gi,   tip: () => '"seperate" → try <b>"separate"</b>' },
+  { re: /\buntill\b/gi,     tip: () => '"untill" → try <b>"until"</b>' },
+  { re: /\b(becuase|beacuse|becasue)\b/gi,
+    tip: m => `"${m[0]}" → try <b>"because"</b>` },
+  { re: /\balot\b/gi,       tip: () => '"alot" → try <b>"a lot"</b> (two words)' },
+  { re: /\bwich\b/gi,       tip: () => '"wich" → try <b>"which"</b>' },
+  { re: /\bthier\b/gi,      tip: () => '"thier" → try <b>"their"</b>' },
+  { re: /\bfreind\b/gi,     tip: () => '"freind" → try <b>"friend"</b>' },
+  { re: /\bwierd\b/gi,      tip: () => '"wierd" → try <b>"weird"</b>' },
+  // Missing apostrophes
+  { re: /\bdont\b/gi,     tip: () => '"dont" → try <b>"don\'t"</b>' },
+  { re: /\bcant\b/gi,     tip: () => '"cant" → try <b>"can\'t"</b>' },
+  { re: /\bwont\b/gi,     tip: () => '"wont" → try <b>"won\'t"</b>' },
+  { re: /\bisnt\b/gi,     tip: () => '"isnt" → try <b>"isn\'t"</b>' },
+  { re: /\barent\b/gi,    tip: () => '"arent" → try <b>"aren\'t"</b>' },
+  { re: /\bcouldnt\b/gi,  tip: () => '"couldnt" → try <b>"couldn\'t"</b>' },
+  { re: /\bwouldnt\b/gi,  tip: () => '"wouldnt" → try <b>"wouldn\'t"</b>' },
+  { re: /\bshouldnt\b/gi, tip: () => '"shouldnt" → try <b>"shouldn\'t"</b>' },
+  { re: /\bhavent\b/gi,   tip: () => '"havent" → try <b>"haven\'t"</b>' },
+  // Lowercase "I" forms
+  { re: /(?:^|\s)(im)(?=\s|$)/gi,  tip: () => '"im" → try <b>"I\'m"</b>' },
+  { re: /(?:^|\s)(ive)(?=\s|$)/gi, tip: () => '"ive" → try <b>"I\'ve"</b>' },
+  { re: /(?:^|\s)(id)(?=\s|$)/gi,  tip: () => '"id" → try <b>"I\'d"</b>' },
+  // Standalone lowercase "i"
+  { re: /(?<![a-zA-Z])(i)(?![a-zA-Z''])/g,
+    tip: () => 'Remember to capitalize <b>"I"</b> when referring to yourself' },
+];
+
+function checkGrammar(text, lang) {
+  if (lang !== 'en') return null;
+  const tips = [];
+  for (const rule of GRAMMAR_RULES) {
+    rule.re.lastIndex = 0;
+    const m = rule.re.exec(text);
+    rule.re.lastIndex = 0;
+    if (m) {
+      const t = rule.tip(m);
+      if (!tips.includes(t)) tips.push(t);
+    }
+    if (tips.length >= 3) break;
+  }
+  return tips.length ? tips : null;
+}
+
+/* =======================================================
+   BAGIAN 3 — BOT RESPONSE ENGINE
+   ======================================================= */
+function getBotReply(text, lang) {
+  const cfg = LANG[lang];
+  for (const { re, replies } of cfg.triggers) {
+    re.lastIndex = 0;
+    if (re.test(text)) {
+      re.lastIndex = 0;
+      return replies[Math.floor(Math.random() * replies.length)];
+    }
+  }
+  const d = cfg.defaults;
+  return d[Math.floor(Math.random() * d.length)];
+}
+
+/* =======================================================
+   BAGIAN 4 — UI HELPERS
+   ======================================================= */
+const chatEl  = document.getElementById('chat');
+const inputEl = document.getElementById('inputBox');
+const sendEl  = document.getElementById('sendBtn');
+const langBar = document.getElementById('langBar');
+const chipsEl = document.getElementById('chips');
+
+let currentLang = 'en';
+let botBusy     = false;
+
+function esc(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function timeNow() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function appendMsg(role, html, tips) {
+  const row = document.createElement('div');
+  row.className = `msg-row msg-row--${role}`;
+
+  const av = document.createElement('div');
+  av.className = 'msg-row__avatar';
+  av.setAttribute('aria-hidden', 'true');
+  av.textContent = role === 'bot' ? '🤖' : '😊';
+
+  const col = document.createElement('div');
+  col.className = 'msg-row__col';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = html;
+  col.appendChild(bubble);
+
+  if (tips && tips.length) {
+    const card = document.createElement('div');
+    card.className = 'correction';
+    card.innerHTML =
+      `<div class="correction__title">${LANG[currentLang].correctionLabel}</div>` +
+      tips.map(t => `• ${t}`).join('<br>');
+    col.appendChild(card);
+  }
+
+  const ts = document.createElement('div');
+  ts.className = 'msg-row__time';
+  ts.textContent = timeNow();
+  col.appendChild(ts);
+
+  row.appendChild(av);
+  row.appendChild(col);
+  chatEl.appendChild(row);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function showTyping() {
+  const row = document.createElement('div');
+  row.className = 'msg-row msg-row--bot';
+  row.id = 'typingRow';
+  row.innerHTML =
+    '<div class="msg-row__avatar" aria-hidden="true">🤖</div>' +
+    '<div class="msg-row__col"><div class="bubble"><div class="typing">' +
+    '<div class="typing__dot"></div>' +
+    '<div class="typing__dot"></div>' +
+    '<div class="typing__dot"></div>' +
+    '</div></div></div>';
+  chatEl.appendChild(row);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function hideTyping() {
+  const el = document.getElementById('typingRow');
+  if (el) el.remove();
+}
+
+function renderChips(lang) {
+  chipsEl.innerHTML = '';
+  LANG[lang].chips.forEach(text => {
+    const btn = document.createElement('button');
+    btn.className = 'chip';
+    btn.textContent = text;
+    btn.addEventListener('click', () => {
+      inputEl.value = text;
+      autoResize();
+      handleSend();
+    });
+    chipsEl.appendChild(btn);
+  });
+}
+
+function autoResize() {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+}
+
+/* =======================================================
+   BAGIAN 5 — KIRIM PESAN
+   ======================================================= */
+function handleSend() {
+  const raw = inputEl.value.trim();
+  if (!raw || botBusy) return;
+
+  const tips = checkGrammar(raw, currentLang);
+  appendMsg('user', esc(raw), tips);
+
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  chipsEl.innerHTML = '';
+
+  botBusy = true;
+  sendEl.disabled = true;
+
+  const delay = 700 + Math.random() * 800;
+  showTyping();
+
+  setTimeout(() => {
+    hideTyping();
+    appendMsg('bot', getBotReply(raw, currentLang), null);
+    botBusy = false;
+    sendEl.disabled = false;
+    inputEl.focus();
+  }, delay);
+}
+
+/* =======================================================
+   BAGIAN 6 — EVENT LISTENERS
+   ======================================================= */
+sendEl.addEventListener('click', handleSend);
+
+inputEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    handleSend();
+  }
+});
+
+inputEl.addEventListener('input', autoResize);
+
+langBar.addEventListener('click', e => {
+  const btn = e.target.closest('.lang-btn');
+  if (!btn) return;
+
+  langBar.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentLang = btn.dataset.lang;
+
+  inputEl.placeholder = LANG[currentLang].placeholder;
+  chatEl.innerHTML    = '';
+  botBusy             = false;
+  sendEl.disabled     = false;
+
+  appendMsg('bot', LANG[currentLang].welcome, null);
+  renderChips(currentLang);
+});
+
+/* =======================================================
+   BAGIAN 7 — INISIALISASI
+   ======================================================= */
+(function init() {
+  inputEl.placeholder = LANG[currentLang].placeholder;
+  appendMsg('bot', LANG[currentLang].welcome, null);
+  renderChips(currentLang);
+  inputEl.focus();
+}());
+</script>
+</body>
+</html>
